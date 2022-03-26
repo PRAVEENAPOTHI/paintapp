@@ -1,13 +1,18 @@
 package com.example.paintapp;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.SeekBar;
@@ -40,33 +45,47 @@ public class MainActivity extends AppCompatActivity {
     ImageButton imgEraser, imgColor, imgSave;
     SeekBar seekBar;
     TextView txtPenSize;
-    
+
     private static String fileName;
-    File path = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/myPaintings");
-    
+
+    String name = "My Paintings";
+    File file;
+
+    private static final int PERMISSION_REQUEST_CODE = 200;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        
+
+        // checking if the app has permission to write to the external storage
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED){
+            // if yes, creating a directory
+            createDirectory();
+        }
+        else{
+            // else, asking the user for the permission
+            askPermission();
+        }
+
         signatureView = findViewById(R.id.signature_view);
         seekBar = findViewById(R.id.penSize);
         txtPenSize = findViewById(R.id.txtPenSize);
         imgColor = findViewById(R.id.btnColor);
         imgEraser = findViewById(R.id.btnEraser);
         imgSave = findViewById(R.id.btnSave);
-        
-        askPermission();
 
         SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault());
         String date = format.format(new Date());
-        fileName = path + "/" + date + ".png";
 
-        if (!path.exists())
-        {
-            path.mkdirs();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
+            file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "My Paintings");
         }
+        else{
+            file = new File(Environment.getExternalStorageDirectory(), name);
+        }
+        fileName = file + "/" + date + ".png";
+
         defaultColor = ContextCompat.getColor(MainActivity.this,R.color.black);
 
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -88,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
-        
+
         imgColor.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -120,9 +139,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-        
-        
-        
+
     }
 
     private void saveImage() throws IOException {
@@ -137,12 +154,10 @@ public class MainActivity extends AppCompatActivity {
         FileOutputStream fos = new FileOutputStream(file);
         fos.write(bitmapData);
         fos.flush();
-        
+
         fos.close();
 
-
         Toast.makeText(this,"Painting Saved!",Toast.LENGTH_SHORT).show();
-
     }
 
     private void openColorPicker() {
@@ -156,30 +171,68 @@ public class MainActivity extends AppCompatActivity {
             public void onOk(AmbilWarnaDialog dialog, int color) {
 
                 defaultColor = color;
-                signatureView.setPenColor(color)
-                ;
-
+                signatureView.setPenColor(color);
             }
         });
         ambilWarnaDialog.show();
     }
 
-    private void askPermission() {
-        Dexter.withContext(this)
-                .withPermissions(Manifest.permission.READ_EXTERNAL_STORAGE,
-                        Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                .withListener(new MultiplePermissionsListener() {
-                    @Override
-                    public void onPermissionsChecked(MultiplePermissionsReport multiplePermissionsReport) {
-                        Toast.makeText(MainActivity.this,"Granted!",Toast.LENGTH_SHORT).show();
+    // method to ask the permissions that are needed for the application to perform
+    private void askPermission(){
+        ActivityCompat.requestPermissions(
+                this,
+                new String[]{
+                        Manifest.permission.READ_EXTERNAL_STORAGE,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE
+                },
+                PERMISSION_REQUEST_CODE
+        );
+    }
 
-                    }
+    // method which returns the result for our askPermission() method
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-                    @Override
-                    public void onPermissionRationaleShouldBeShown(List<PermissionRequest> list, PermissionToken permissionToken) {
-                        permissionToken.continuePermissionRequest();
+        if(requestCode == PERMISSION_REQUEST_CODE){
+            if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
+                createDirectory();
+            }
+            else{
+                Toast.makeText(getApplicationContext(), "Permission Denied", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
 
-                    }
-                }).check();
+    // method to create a separate directory for the app
+    private void createDirectory() {
+        // creating a directory for the Paint app
+        // let the name be My Paintings
+        folderNameDetermination();
+
+        if(! file.exists()){
+            // creating a folder if the folder does not already exist
+            if(file.mkdir()){
+                Toast.makeText(this, "Folder created", Toast.LENGTH_SHORT).show();
+            }
+            else{
+                Toast.makeText(this, "Folder not created", Toast.LENGTH_SHORT).show();
+            }
+        }
+        else{
+            Toast.makeText(this, "Folder already exists", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    // determining the folder destination for the application
+    // for android 11 and above devices, creating a folder in the Documents folder
+    // else, creating a folder in the outer main region
+    private void folderNameDetermination(){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
+            file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "My Paintings");
+        }
+        else{
+            file = new File(Environment.getExternalStorageDirectory(), name);
+        }
     }
 }
