@@ -19,6 +19,8 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.huawei.hms.ads.HwAds;
+import com.huawei.hms.ads.banner.BannerView;
 import com.karumi.dexter.Dexter;
 import com.karumi.dexter.MultiplePermissionsReport;
 import com.karumi.dexter.PermissionToken;
@@ -52,6 +54,8 @@ public class MainActivity extends AppCompatActivity {
     File file;
 
     private static final int PERMISSION_REQUEST_CODE = 200;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -233,6 +237,17 @@ public class MainActivity extends AppCompatActivity {
         }
         else{
             file = new File(Environment.getExternalStorageDirectory(), name);
+
+            public class MainActivity extends AppCompatActivity {
+                private BannerView bannerView;
+                @Override
+                protected void onCreate(Bundle savedInstanceState) {
+                    super.onCreate(savedInstanceState);
+                    setContentView(R.layout.activity_main);
+                    // Initialize the HUAWEI Ads SDK.
+                    HwAds.init(this);
+                }
+            }
         }
     }
 }
